@@ -1,0 +1,1 @@
+python video_to_data.py -v ../data/anime -o ../data/anime_frames -b 180 -e -180 -s 60
