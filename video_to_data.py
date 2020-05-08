@@ -2,6 +2,7 @@ import argparse
 import cv2
 import glob
 import os
+from img_utils import get_outline, has_content_threshold
 
 parser = argparse.ArgumentParser()
 parser.add_argument('-v', '--video_dir', dest='video_dir', type=str,
@@ -14,10 +15,13 @@ parser.add_argument('-b', '--start_time', dest='start_time', type=float,
     default=0, help='How many seconds into each video to start')
 parser.add_argument('-e', '--end_time', dest='end_time', type=float,
     default=0, help='How many seconds into each video to end')
+parser.add_argument('-bw', '--black_white', dest='extract_outlines', type=bool,
+    default=True, help='Whether the extracted images should be converted to black and white outlines.')
 
 VIDEO_TYPES = ('*.mp4', '*.mkv')
 
-def video_to_frames(video_path, output_dir, frame_skip, start_time=0, end_time=0):
+def video_to_frames(video_path, output_dir, frame_skip, start_time=0,
+                    end_time=0, extract_outlines=True):
     video_name = os.path.basename(video_path)
     video_name = video_name[:video_name.rfind('.')]
     cap = cv2.VideoCapture(video_path)
@@ -49,9 +53,16 @@ def video_to_frames(video_path, output_dir, frame_skip, start_time=0, end_time=0
         success, frame = cap.read()
   
         if frame_idx % frame_skip == 0:
-            cv2.imwrite(os.path.join(output_dir,
-                f'{video_name}_frame_{used_frame_idx}.png'), frame)
-            used_frame_idx += 1
+            save_frame = True
+            if extract_outlines:
+                frame = get_outline(frame)
+                if not has_content_threshold(frame):
+                    save_frame = False
+                    
+            if save_frame:
+                cv2.imwrite(os.path.join(output_dir,
+                    f'{video_name}_frame_{used_frame_idx}.png'), frame)
+                used_frame_idx += 1
   
         frame_idx += 1
     
@@ -68,6 +79,6 @@ if __name__ == '__main__':
     for i, video_path in enumerate(video_paths):
         print(f'Working on video #{i+1}...')
         n_frames = video_to_frames(video_path, args.output_dir, args.frame_skip,
-                                   args.start_time, args.end_time)
+                                   args.start_time, args.end_time, args.extract_outlines)
         print(f'{n_frames} frames written')
     print('Done')
